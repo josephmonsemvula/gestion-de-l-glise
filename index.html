@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Gestion de Culte - Pro</title>
+    <!-- Manifest pour l'effet "Application" -->
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --bleu-pro: #0056b3;
+            --blanc: #ffffff;
+            --gris-clair: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--gris-clair);
+            margin: 0;
+            padding-bottom: 50px;
+        }
+
+        header {
+            background-color: var(--bleu-pro);
+            color: var(--blanc);
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .container {
+            padding: 10px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--blanc);
+            min-width: 1200px; /* Force le scroll sur mobile pour le tableau */
+        }
+
+        th {
+            background-color: var(--bleu-pro);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-size: 0.9em;
+        }
+
+        td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+        }
+
+        input {
+            width: 100%;
+            border: none;
+            outline: none;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+
+        .total-cell {
+            font-weight: bold;
+            background-color: #e9ecef;
+            color: var(--bleu-pro);
+        }
+
+        /* Bandeau Défilant */
+        .marquee-container {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: var(--bleu-pro);
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            padding: 10px 0;
+            font-weight: bold;
+            z-index: 1000;
+        }
+
+        .marquee-text {
+            display: inline-block;
+            padding-left: 100%;
+            animation: scroll 15s linear infinite;
+        }
+
+        @keyframes scroll {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-100%, 0); }
+        }
+
+        .btn-add {
+            background: var(--bleu-pro);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>GESTION DES CULTES</h1>
+</header>
+
+<div class="container">
+    <button class="btn-add" onclick="addRow()">Ajouter un Culte</button>
+    <table id="tableCulte">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Prédicateur</th>
+                <th>Offrande</th>
+                <th>Offrande Prophète (-)</th>
+                <th>Alliance</th>
+                <th>Carte Mens.</th>
+                <th>Dime</th>
+                <th>Construction</th>
+                <th>Dépense (-)</th>
+                <th>Envel. Sém.</th>
+                <th>Autres</th>
+                <th>TOTAL NET</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- Les lignes s'ajouteront ici -->
+        </tbody>
+    </table>
+</div>
+
+<div class="marquee-container">
+    <div class="marquee-text">
+        JOSEPH CONCEPTION +2430897997253 pour tout vos projet — EXCELLENCE ET PROFESSIONNALISME —
+    </div>
+</div>
+
+<script>
+    // Chargement initial
+    window.onload = loadData;
+
+    function addRow(data = null) {
+        const tbody = document.getElementById('tableBody');
+        const row = document.createElement('tr');
+        
+        const fields = ['date', 'predic', 'off', 'offPr', 'all', 'carte', 'dime', 'const', 'dep', 'sem', 'aut'];
+        
+        let html = '';
+        fields.forEach((f, index) => {
+            let val = data ? data[f] : '';
+            let type = (index === 0) ? 'date' : (index === 1 ? 'text' : 'number');
+            html += `<td><input type="${type}" class="input-val" data-field="${f}" value="${val}" oninput="calculateTotal(this)"></td>`;
+        });
+
+        html += `<td class="total-cell">0.00</td>`;
+        row.innerHTML = html;
+        tbody.appendChild(row);
+        
+        if(data) updateRowTotal(row);
+    }
+
+    function calculateTotal(input) {
+        const row = input.closest('tr');
+        updateRowTotal(row);
+        saveData();
+    }
+
+    function updateRowTotal(row) {
+        const inputs = row.querySelectorAll('.input-val');
+        let total = 0;
+
+        inputs.forEach(input => {
+            let val = parseFloat(input.value) || 0;
+            let field = input.getAttribute('data-field');
+
+            // Logique de calcul : Moins pour prophète et dépense, Plus pour le reste
+            if (field === 'offPr' || field === 'dep') {
+                total -= val;
+            } else if (field !== 'date' && field !== 'predic') {
+                total += val;
+            }
+        });
+
+        row.querySelector('.total-cell').innerText = total.toFixed(2);
+    }
+
+    function saveData() {
+        const rows = document.querySelectorAll('#tableBody tr');
+        let allData = [];
+        rows.forEach(row => {
+            let rowObj = {};
+            row.querySelectorAll('.input-val').forEach(input => {
+                rowObj[input.getAttribute('data-field')] = input.value;
+            });
+            allData.push(rowObj);
+        });
+        localStorage.setItem('churchData', JSON.stringify(allData));
+    }
+
+    function loadData() {
+        const saved = localStorage.getItem('churchData');
+        if (saved) {
+            const data = JSON.parse(saved);
+            data.forEach(d => addRow(d));
+        } else {
+            addRow(); // Une ligne vide par défaut
+        }
+    }
+</script>
+
+</body>
+</html>
